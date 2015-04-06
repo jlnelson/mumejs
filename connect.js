@@ -6,7 +6,8 @@ var net = require('net'),
     stdin = process.stdin,
     stdout = process.stdout,
     telnetInput = new TelnetInput(),
-    telnetOutput = new TelnetOutput();
+    telnetOutput = new TelnetOutput(),
+    history = [];
 
 
 var ECHO = 1,
@@ -19,32 +20,84 @@ stdin.setRawMode(true);
 stdin.resume();
 stdin.setEncoding('utf8');
 
-var curCommand = '';
+var curCommand = '',
+    curIndex = 0,
+    curHistIndex = 0;
 var keyStream = new stream.Stream();
 keyStream.writeable = true;
 keyStream.readable = true;
 keyStream.write = function(data) {
-    var key = data.charCodeAt(0);
-    switch (key) {
-        case 3:
+    switch (data) {
+        case '\u0003': //Ctrl-C
             process.exit();
             break;
-        case 13:
-            curCommand+=data;
+        case '\u000d': //Enter
+            curCommand;
             stdout.write('\n');
-            this.emit('data', curCommand);
+            this.emit('data', curCommand+'\n');
+            if (!authenticating) {
+                if (history[history.length-1] != curCommand && curCommand != '') {
+                    history.push(curCommand);
+                }
+                curHistIndex = history.length;
+            }
             curCommand = '';
+            curIndex = 0;
             break;
-        case 127:
+        case '\u001b\u005b\u0044': //Left
+            if (!authenticating) {
+                stdout.write('\u001B[1D');
+                curIndex--;
+            }
+            break;
+        case '\u001b\u005b\u0043': //Right
+            if (!authenticating && curIndex < curCommand.length) {
+                stdout.write('\u001B[1C');
+                curIndex++;
+            }
+            break;
+        case '\u001b\u005b\u0041': //Up
+            if (!authenticating && curHistIndex) {
+                var updateString = curIndex ? '\u001B['+curIndex+'D' : '';
+                updateString += '\u001B[K';
+                curHistIndex--;
+                curCommand = history[curHistIndex];
+                curIndex = curCommand.length;
+                stdout.write(updateString+curCommand);
+            }
+            break;
+        case '\u001b\u005b\u0042': //Down
+            if (!authenticating && curHistIndex < history.length) {
+                var updateString = curIndex ? '\u001B['+curIndex+'D' : '';
+                updateString += '\u001B[K';
+                curHistIndex++;
+                if (curHistIndex == history.length) {
+                    curCommand = '';
+                }
+                else {
+                    curCommand = history[curHistIndex];
+                }
+                curIndex = curCommand.length;
+                stdout.write(updateString+curCommand);
+            }
+            break;
+        case '\u007f': //Backspace
             if (curCommand.length) {
                 curCommand = curCommand.slice(0,-1);
+                curIndex--;
                 stdout.write('\b\u001B[K');
             }
             break;
         default:
-            curCommand+=data;
+            curCommand = curCommand.slice(0, curIndex) + data + curCommand.slice(curIndex);
+            curIndex++;
             if (!authenticating) {
-                stdout.write(data);
+                if (curIndex < curCommand.length) {
+                    stdout.write('\u001B[s'+data+curCommand.slice(curIndex)+'\u001B[u\u001B[1C');
+                }
+                else {
+                    stdout.write(data);
+                }
             }
             break;
     }
