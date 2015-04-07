@@ -1,12 +1,18 @@
 {
   "name": "mumejs",
   "version": "0.0.1",
+  "author": "John Nelson",
   "description": "A telnet client for MUME.",
-  "main": "connect.js",
   "dependencies": {
     "iconv": "^2.1.6",
     "telnet-stream": "^0.0.4"
   },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/mit-license.php"
+    }
+  ],
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,10 +21,7 @@
     "type": "git",
     "url": "https://github.com/jlnelson/mumejs.git"
   },
-  "author": "John Nelson",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/jlnelson/mumejs/issues"
-  },
-  "homepage": "https://github.com/jlnelson/mumejs"
+  "homepage": "https://github.com/jlnelson/mumejs",
+  "main": "./lib/mumejs",
+  "bin": "./bin/mumejs"
 }
